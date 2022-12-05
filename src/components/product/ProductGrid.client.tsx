@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {useState, useRef, useEffect, useCallback} from 'react';
 import {Link, flattenConnection} from '@shopify/hydrogen';
 
@@ -6,9 +7,11 @@ import {getImageLoadingPriority} from '~/lib/const';
 import type {Collection, Product} from '@shopify/hydrogen/storefront-api-types';
 
 export function ProductGrid({
+  type,
   url,
   collection,
 }: {
+  type: string;
   url: string;
   collection: Collection;
 }) {
@@ -25,6 +28,9 @@ export function ProductGrid({
     setPending(true);
     const postUrl = new URL(window.location.origin + url);
     postUrl.searchParams.set('cursor', cursor);
+    if (type) {
+      postUrl.searchParams.set('type', type);
+    }
 
     const response = await fetch(postUrl, {
       method: 'POST',
@@ -36,6 +42,7 @@ export function ProductGrid({
     const newProducts: Product[] = flattenConnection<Product>(
       data?.collection?.products || data?.products || [],
     );
+
     const {endCursor, hasNextPage} = data?.collection?.products?.pageInfo ||
       data?.products?.pageInfo || {endCursor: '', hasNextPage: false};
 
@@ -43,7 +50,7 @@ export function ProductGrid({
     setCursor(endCursor);
     setNextPage(hasNextPage);
     setPending(false);
-  }, [cursor, url, products]);
+  }, [cursor, url, products, type]);
 
   const handleIntersect = useCallback(
     (entries: IntersectionObserverEntry[]) => {

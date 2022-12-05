@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {Suspense} from 'react';
 import {
   gql,
@@ -17,8 +18,11 @@ import {NotFound, Layout} from '~/components/index.server';
 
 const pageBy = 48;
 
-export default function Collection({params}: HydrogenRouteProps) {
+export default function Collection({params, search}: HydrogenRouteProps) {
   const {handle} = params;
+  const type = search.substring(1).split('=')[1];
+  console.log('search', type);
+
   const {
     language: {isoCode: language},
     country: {isoCode: country},
@@ -27,16 +31,22 @@ export default function Collection({params}: HydrogenRouteProps) {
   const {
     data: {collection},
   } = useShopQuery({
-    query: COLLECTION_QUERY,
-    variables: {
-      handle,
-      language,
-      country,
-      pageBy,
-    },
+    query: type ? COLLECTION_WITH_PARAMS_QUERY : COLLECTION_QUERY,
+    variables: type
+      ? {type, handle, language, country, pageBy}
+      : {handle, language, country, pageBy},
     preload: true,
   });
-
+  // const filter = {
+  //   ...collection,
+  //   products: {
+  //     ...collection.products,
+  //     nodes: collection?.products?.nodes.slice(0, 2),
+  //   },
+  // };
+  // console.log('FILTER', filter);
+  // const filtered =
+  // console.log('COLLECTION', collection?.products?.nodes.slice(0, 3));
   if (!collection) {
     return <NotFound type="collection" />;
   }
@@ -71,6 +81,7 @@ export default function Collection({params}: HydrogenRouteProps) {
           key={collection.id}
           collection={collection}
           url={`/collections/${handle}?country=${country}`}
+          type={type}
         />
       </Section>
     </Layout>
@@ -89,8 +100,12 @@ export async function api(
       headers: {Allow: 'POST'},
     });
   }
-  const url = new URL(request.url);
 
+  // const type = "women's clothing";
+  const url = new URL(request.url);
+  // console.log(' URL:::!!!', url);
+  const type = url.searchParams.get('type');
+  console.log(' TYPE:::!!!', type);
   const cursor = url.searchParams.get('cursor');
   const country = url.searchParams.get('country');
   const {handle} = params;
@@ -98,6 +113,7 @@ export async function api(
   return await queryShop({
     query: PAGINATE_COLLECTION_QUERY,
     variables: {
+      type,
       handle,
       cursor,
       pageBy,
@@ -105,6 +121,48 @@ export async function api(
     },
   });
 }
+
+export interface IType {
+  productType: string;
+}
+
+const COLLECTION_WITH_PARAMS_QUERY = gql`
+  ${PRODUCT_CARD_FRAGMENT}
+  query CollectionDetails(
+    $type: String!
+    $handle: String!
+    $country: CountryCode
+    $language: LanguageCode
+    $pageBy: Int!
+    $cursor: String
+  ) @inContext(country: $country, language: $language) {
+    collection(handle: $handle) {
+      id
+      title
+      description
+      seo {
+        description
+        title
+      }
+      image {
+        id
+        url
+        width
+        height
+        altText
+      }
+      products(first: $pageBy, after: $cursor, filters: {productType: $type}) {
+        nodes {
+          ...ProductCard
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+`;
 
 const COLLECTION_QUERY = gql`
   ${PRODUCT_CARD_FRAGMENT}
@@ -146,6 +204,7 @@ const COLLECTION_QUERY = gql`
 const PAGINATE_COLLECTION_QUERY = gql`
   ${PRODUCT_CARD_FRAGMENT}
   query CollectionPage(
+    $type: String
     $handle: String!
     $pageBy: Int!
     $cursor: String
@@ -153,7 +212,7 @@ const PAGINATE_COLLECTION_QUERY = gql`
     $language: LanguageCode
   ) @inContext(country: $country, language: $language) {
     collection(handle: $handle) {
-      products(first: $pageBy, after: $cursor) {
+      products(first: $pageBy, after: $cursor, filters: {productType: $type}) {
         nodes {
           ...ProductCard
         }
