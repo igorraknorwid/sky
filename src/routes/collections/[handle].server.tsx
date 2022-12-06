@@ -1,6 +1,7 @@
 /* eslint-disable prettier/prettier */
 import {Suspense} from 'react';
 import {
+  Link,
   gql,
   type HydrogenRouteProps,
   Seo,
@@ -20,33 +21,51 @@ const pageBy = 48;
 
 export default function Collection({params, search}: HydrogenRouteProps) {
   const {handle} = params;
-  const type = search.substring(1).split('=')[1];
-  console.log('search', type);
+  const filteringData: {types: any[]} = {
+    types: [],
+  };
+
+  function getFilteringData() {
+    const pageBy = 100;
+    const {
+      data: {collection},
+    } = useShopQuery({
+      query: FOR_FILTERING_COLLECTION_QUERY,
+      variables: {handle, language, country, pageBy},
+      preload: true,
+    });
+
+    const mapedByVendorCollection = [...collection.products.nodes].map(
+      (node: any) => node.productType,
+    );
+
+    const removedVendorDublicaters = [...new Set(mapedByVendorCollection)];
+    filteringData.types = [...removedVendorDublicaters];
+  }
 
   const {
     language: {isoCode: language},
     country: {isoCode: country},
   } = useLocalization();
 
+  getFilteringData();
+
+  const type = search.substring(1).split('=')[1];
+
+  const found = filteringData.types.find((element) => element === type);
+
+  const checkedType = found && type;
+
   const {
     data: {collection},
   } = useShopQuery({
-    query: type ? COLLECTION_WITH_PARAMS_QUERY : COLLECTION_QUERY,
+    query: checkedType ? COLLECTION_WITH_PARAMS_QUERY : COLLECTION_QUERY,
     variables: type
       ? {type, handle, language, country, pageBy}
       : {handle, language, country, pageBy},
     preload: true,
   });
-  // const filter = {
-  //   ...collection,
-  //   products: {
-  //     ...collection.products,
-  //     nodes: collection?.products?.nodes.slice(0, 2),
-  //   },
-  // };
-  // console.log('FILTER', filter);
-  // const filtered =
-  // console.log('COLLECTION', collection?.products?.nodes.slice(0, 3));
+
   if (!collection) {
     return <NotFound type="collection" />;
   }
@@ -77,12 +96,36 @@ export default function Collection({params, search}: HydrogenRouteProps) {
         )}
       </PageHeader>
       <Section>
-        <ProductGrid
-          key={collection.id}
-          collection={collection}
-          url={`/collections/${handle}?country=${country}`}
-          type={type}
-        />
+        <div className="flex">
+          <div className="w-1/4">
+            {filteringData?.types ? (
+              <div>
+                {filteringData.types.map((node) => (
+                  <p
+                    key={node}
+                    className={`${
+                      node === checkedType && 'font-bold'
+                    }text-red-600`}
+                  >
+                    <Link to={`/collections/${handle}?type=${node}`}>
+                      {node}
+                    </Link>
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p>No Filters</p>
+            )}
+          </div>
+          <div>
+            <ProductGrid
+              key={collection.id}
+              collection={collection}
+              url={`/collections/${handle}?country=${country}`}
+              type={type}
+            />
+          </div>
+        </div>
       </Section>
     </Layout>
   );
@@ -213,6 +256,29 @@ const PAGINATE_COLLECTION_QUERY = gql`
   ) @inContext(country: $country, language: $language) {
     collection(handle: $handle) {
       products(first: $pageBy, after: $cursor, filters: {productType: $type}) {
+        nodes {
+          ...ProductCard
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+`;
+
+const FOR_FILTERING_COLLECTION_QUERY = gql`
+  ${PRODUCT_CARD_FRAGMENT}
+  query CollectionPage(
+    $handle: String!
+    $pageBy: Int!
+    $cursor: String
+    $country: CountryCode
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    collection(handle: $handle) {
+      products(first: $pageBy, after: $cursor) {
         nodes {
           ...ProductCard
         }
