@@ -99,7 +99,7 @@ export function ProductGrid({
   return (
     <>
       <Grid layout="products">
-        {products.map((product, i) => (
+        {collection?.products?.nodes.map((product, i) => (
           <ProductCard
             key={product.id}
             product={product}
