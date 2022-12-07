@@ -15,21 +15,21 @@ export function ProductGrid({
   url: string;
   collection: Collection;
 }) {
-  console.log('collection?.products?.nodes :::', collection?.products?.nodes);
+  // console.log('collection?.products?.nodes :::', collection?.products?.nodes);
   const nextButtonRef = useRef(null);
   const initialProducts = collection?.products?.nodes || [];
-  console.log('initialProducts :::', initialProducts);
+  // console.log('initialProducts :::', initialProducts);
   const {hasNextPage, endCursor} = collection?.products?.pageInfo ?? {};
   const [products, setProducts] = useState<Product[]>(initialProducts);
-  console.log('Products Before::::', products);
+  // console.log('Products Before::::', products);
   const [cursor, setCursor] = useState(endCursor ?? '');
   const [nextPage, setNextPage] = useState(hasNextPage);
   const [pending, setPending] = useState(false);
   const haveProducts = initialProducts.length > 0;
 
-  useEffect(() => {
-    setProducts(collection.products.nodes);
-  }, []);
+  // useEffect(() => {
+  //   setProducts(collection.products.nodes);
+  // }, []);
 
   const fetchProducts = useCallback(async () => {
     console.log('fetchProducts', cursor);
@@ -95,7 +95,7 @@ export function ProductGrid({
       </>
     );
   }
-  console.log('Products', products);
+
   return (
     <>
       <Grid layout="products">

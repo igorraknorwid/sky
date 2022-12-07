@@ -50,11 +50,103 @@ export default function Collection({params, search}: HydrogenRouteProps) {
 
   getFilteringData();
 
+  const filterAccumulator: {productTypes: string[]; vendors: string[]} = {
+    productTypes: ["women's clothing", "men's clothing"],
+    vendors: ['Zara'],
+  };
+
+  const prType = 'productType';
+  const leftBreck = '{';
+  const rightBreck = '}';
+  const coska = '"';
+  const dwetoczki = ':';
+  const zapiata = ',';
+
+  function setFiltersGrafQLString(fa: {
+    productTypes: string[];
+    vendors: string[];
+  }) {
+    let assembly = '';
+    // const productType = 'productType';
+    // const vendor = 'vendor';
+    const leftBracket = '{';
+    const rightBreck = '}';
+    const anvil = '"';
+    const colon = ':';
+    const comma = ',';
+    const setBlock = (Key: string, Value: string) => {
+      return `${leftBracket}${Key}${colon}${anvil}${Value}${anvil}${rightBreck}${comma}`;
+    };
+    if (fa.productTypes) {
+      fa.productTypes.forEach((node) => {
+        const key = Object.keys(fa);
+        const result = setBlock(key[0], node);
+        assembly += result;
+      });
+    }
+    if (fa.vendors) {
+      fa.vendors.forEach((node) => {
+        const key = Object.keys(fa);
+        const result = setBlock(key[1], node);
+        assembly += result;
+      });
+    }
+    console.log('Assembly', assembly, typeof assembly);
+    return assembly;
+  }
+
+  setFiltersGrafQLString(filterAccumulator);
+
   const type = search.substring(1).split('=')[1];
 
   const found = filteringData.types.find((element) => element === type);
 
   const checkedType = found && type;
+
+  const assemble = `${leftBreck}${prType}${dwetoczki} ${coska}${type}${coska}${rightBreck}${zapiata}`;
+
+  console.log('STRI', typeof assemble, assemble);
+
+  const COLLECTION_WITH_PARAMS_QUERY = `
+    ${PRODUCT_CARD_FRAGMENT}
+    query CollectionDetails(    
+      $handle: String!
+      $country: CountryCode
+      $language: LanguageCode
+      $pageBy: Int!
+      $cursor: String
+    ) @inContext(country: $country, language: $language) {
+      collection(handle: $handle) {
+        id
+        title
+        description
+        seo {
+          description
+          title
+        }
+        image {
+          id
+          url
+          width
+          height
+          altText
+        }
+        products(
+          first: $pageBy
+          after: $cursor
+          filters: [${assemble}]
+        ) {
+          nodes {
+            ...ProductCard
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    }
+  `;
 
   const {
     data: {collection},
@@ -169,43 +261,43 @@ export interface IType {
   productType: string;
 }
 
-const COLLECTION_WITH_PARAMS_QUERY = gql`
-  ${PRODUCT_CARD_FRAGMENT}
-  query CollectionDetails(
-    $type: String!
-    $handle: String!
-    $country: CountryCode
-    $language: LanguageCode
-    $pageBy: Int!
-    $cursor: String
-  ) @inContext(country: $country, language: $language) {
-    collection(handle: $handle) {
-      id
-      title
-      description
-      seo {
-        description
-        title
-      }
-      image {
-        id
-        url
-        width
-        height
-        altText
-      }
-      products(first: $pageBy, after: $cursor, filters: {productType: $type}) {
-        nodes {
-          ...ProductCard
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-      }
-    }
-  }
-`;
+// const COLLECTION_WITH_PARAMS_QUERY = gql`
+//   ${PRODUCT_CARD_FRAGMENT}
+//   query CollectionDetails(
+//     $test: String
+//     $handle: String!
+//     $country: CountryCode
+//     $language: LanguageCode
+//     $pageBy: Int!
+//     $cursor: String
+//   ) @inContext(country: $country, language: $language) {
+//     collection(handle: $handle) {
+//       id
+//       title
+//       description
+//       seo {
+//         description
+//         title
+//       }
+//       image {
+//         id
+//         url
+//         width
+//         height
+//         altText
+//       }
+//       products(first: $pageBy, after: $cursor, filters: $test) {
+//         nodes {
+//           ...ProductCard
+//         }
+//         pageInfo {
+//           hasNextPage
+//           endCursor
+//         }
+//       }
+//     }
+//   }
+// `;
 
 const COLLECTION_QUERY = gql`
   ${PRODUCT_CARD_FRAGMENT}
