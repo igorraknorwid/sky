@@ -21,8 +21,15 @@ const pageBy = 48;
 
 export default function Collection({params, search}: HydrogenRouteProps) {
   const {handle} = params;
-  const filteringData: {types: any[]} = {
+  let IsRightSearchParams = true;
+  const filteringData: {types: any[]; vendors: any[]} = {
     types: [],
+    vendors: [],
+  };
+
+  const stringAccunulator: {productType: string[]; productVendor: string[]} = {
+    productType: [],
+    productVendor: [],
   };
 
   function getFilteringData() {
@@ -35,12 +42,52 @@ export default function Collection({params, search}: HydrogenRouteProps) {
       preload: true,
     });
 
-    const mapedByVendorCollection = [...collection.products.nodes].map(
+    const mapedByProductTypeCollection = [...collection.products.nodes].map(
       (node: any) => node.productType,
     );
+    filteringData.types = [...new Set(mapedByProductTypeCollection)];
 
-    const removedVendorDublicaters = [...new Set(mapedByVendorCollection)];
-    filteringData.types = [...removedVendorDublicaters];
+    const mapedByVendorCollection = [...collection.products.nodes].map(
+      (node: any) => node.vendor,
+    );
+    filteringData.vendors = [...new Set(mapedByVendorCollection)];
+  }
+
+  function setFiltersGrafQLString(fa: {
+    productType: string[];
+    productVendor: string[];
+  }) {
+    let assembly = '';
+    const leftBracket = '{';
+    const rightBreck = '}';
+    const anvil = '"';
+    const colon = ':';
+    const comma = ',';
+    const setBlock = (Key: string, Value: string) => {
+      return `${leftBracket}${Key}${colon}${anvil}${Value}${anvil}${rightBreck}${comma}`;
+    };
+    const setAssembly = (node: string, arrKey: number) => {
+      const key = Object.keys(fa);
+      const result = setBlock(key[arrKey], node);
+      assembly += result;
+    };
+
+    if (fa.productType) {
+      fa.productType.forEach((node) => {
+        setAssembly(node, 0);
+      });
+    }
+    if (fa.productVendor) {
+      fa.productVendor.forEach((node) => {
+        setAssembly(node, 1);
+      });
+    }
+    return assembly;
+  }
+
+  const searchParams: string[] = search.substring(1).split('&');
+  if (searchParams.length) {
+    IsRightSearchParams = false;
   }
 
   const {
@@ -50,66 +97,38 @@ export default function Collection({params, search}: HydrogenRouteProps) {
 
   getFilteringData();
 
-  const filterAccumulator: {productTypes: string[]; vendors: string[]} = {
-    productTypes: ["women's clothing", "men's clothing"],
-    vendors: ['Zara'],
-  };
+  // fill Filter Accumulator
 
-  const prType = 'productType';
-  const leftBreck = '{';
-  const rightBreck = '}';
-  const coska = '"';
-  const dwetoczki = ':';
-  const zapiata = ',';
-
-  function setFiltersGrafQLString(fa: {
-    productTypes: string[];
-    vendors: string[];
-  }) {
-    let assembly = '';
-    // const productType = 'productType';
-    // const vendor = 'vendor';
-    const leftBracket = '{';
-    const rightBreck = '}';
-    const anvil = '"';
-    const colon = ':';
-    const comma = ',';
-    const setBlock = (Key: string, Value: string) => {
-      return `${leftBracket}${Key}${colon}${anvil}${Value}${anvil}${rightBreck}${comma}`;
-    };
-    if (fa.productTypes) {
-      fa.productTypes.forEach((node) => {
-        const key = Object.keys(fa);
-        const result = setBlock(key[0], node);
-        assembly += result;
-      });
+  searchParams?.forEach((node) => {
+    const splitedNode = node.split('=');
+    if (splitedNode[0] === 'type') {
+      stringAccunulator.productType.push(splitedNode[1]);
     }
-    if (fa.vendors) {
-      fa.vendors.forEach((node) => {
-        const key = Object.keys(fa);
-        const result = setBlock(key[1], node);
-        assembly += result;
-      });
+    if (splitedNode[0] === 'brand') {
+      stringAccunulator.productVendor.push(splitedNode[1]);
     }
-    console.log('Assembly', assembly, typeof assembly);
-    return assembly;
-  }
+    if (splitedNode[0] !== 'brand' && splitedNode[0] !== 'type') {
+      IsRightSearchParams = false;
+    }
+  });
 
-  setFiltersGrafQLString(filterAccumulator);
+  setFiltersGrafQLString(stringAccunulator); // set GrafQL query
+  const assemble = setFiltersGrafQLString(stringAccunulator);
 
-  const type = search.substring(1).split('=')[1];
-
-  const found = filteringData.types.find((element) => element === type);
-
-  const checkedType = found && type;
-
-  const assemble = `${leftBreck}${prType}${dwetoczki} ${coska}${type}${coska}${rightBreck}${zapiata}`;
-
-  console.log('STRI', typeof assemble, assemble);
+  // const checkSearchParam = (strings: string[], types: string[]) => {
+  //   let result = true;
+  //   strings.forEach((vendor) => {
+  //     const find = types.find((v) => v === vendor);
+  //     if (!find) {
+  //       result = false;
+  //     }
+  //   });
+  //   return result;
+  // };
 
   const COLLECTION_WITH_PARAMS_QUERY = `
     ${PRODUCT_CARD_FRAGMENT}
-    query CollectionDetails(    
+    query CollectionDetails(
       $handle: String!
       $country: CountryCode
       $language: LanguageCode
@@ -151,10 +170,10 @@ export default function Collection({params, search}: HydrogenRouteProps) {
   const {
     data: {collection},
   } = useShopQuery({
-    query: checkedType ? COLLECTION_WITH_PARAMS_QUERY : COLLECTION_QUERY,
-    variables: type
-      ? {type, handle, language, country, pageBy}
-      : {handle, language, country, pageBy},
+    query: IsRightSearchParams
+      ? COLLECTION_QUERY
+      : COLLECTION_WITH_PARAMS_QUERY,
+    variables: {handle, language, country, pageBy},
     preload: true,
   });
 
@@ -190,31 +209,48 @@ export default function Collection({params, search}: HydrogenRouteProps) {
       <Section>
         <div className="flex">
           <div className="w-1/4">
-            {filteringData?.types ? (
+            <div>
+              <p>Filter by:</p>
               <div>
-                {filteringData.types.map((node) => (
-                  <p
-                    key={node}
-                    className={`${
-                      node === checkedType && 'font-bold'
-                    }text-red-600`}
-                  >
-                    <Link to={`/collections/${handle}?type=${node}`}>
-                      {node}
-                    </Link>
-                  </p>
-                ))}
+                {filteringData?.types ? (
+                  <div>
+                    {filteringData.types.map((node) => (
+                      <p key={node} className={`text-red-600`}>
+                        <Link to={`/collections/${handle}?type=${node}`}>
+                          {node}
+                        </Link>
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No Filters</p>
+                )}
               </div>
-            ) : (
-              <p>No Filters</p>
-            )}
+            </div>
+            <div>
+              <p>Brands:</p>
+              <div>
+                {filteringData?.vendors ? (
+                  <div>
+                    {filteringData.vendors.map((node) => (
+                      <p key={node} className={`text-red-600`}>
+                        <Link to={`/collections/${handle}?brand=${node}`}>
+                          {node}
+                        </Link>
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No Filters</p>
+                )}
+              </div>
+            </div>
           </div>
           <div>
             <ProductGrid
               key={collection.id}
               collection={collection}
               url={`/collections/${handle}?country=${country}`}
-              type={type}
             />
           </div>
         </div>
@@ -240,7 +276,6 @@ export async function api(
   const url = new URL(request.url);
   // console.log(' URL:::!!!', url);
   const type = url.searchParams.get('type');
-  console.log(' TYPE:::!!!', type);
   const cursor = url.searchParams.get('cursor');
   const country = url.searchParams.get('country');
   const {handle} = params;
@@ -260,44 +295,6 @@ export async function api(
 export interface IType {
   productType: string;
 }
-
-// const COLLECTION_WITH_PARAMS_QUERY = gql`
-//   ${PRODUCT_CARD_FRAGMENT}
-//   query CollectionDetails(
-//     $test: String
-//     $handle: String!
-//     $country: CountryCode
-//     $language: LanguageCode
-//     $pageBy: Int!
-//     $cursor: String
-//   ) @inContext(country: $country, language: $language) {
-//     collection(handle: $handle) {
-//       id
-//       title
-//       description
-//       seo {
-//         description
-//         title
-//       }
-//       image {
-//         id
-//         url
-//         width
-//         height
-//         altText
-//       }
-//       products(first: $pageBy, after: $cursor, filters: $test) {
-//         nodes {
-//           ...ProductCard
-//         }
-//         pageInfo {
-//           hasNextPage
-//           endCursor
-//         }
-//       }
-//     }
-//   }
-// `;
 
 const COLLECTION_QUERY = gql`
   ${PRODUCT_CARD_FRAGMENT}

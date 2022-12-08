@@ -7,11 +7,9 @@ import {getImageLoadingPriority} from '~/lib/const';
 import type {Collection, Product} from '@shopify/hydrogen/storefront-api-types';
 
 export function ProductGrid({
-  type,
   url,
   collection,
 }: {
-  type: string;
   url: string;
   collection: Collection;
 }) {
@@ -32,13 +30,9 @@ export function ProductGrid({
   // }, []);
 
   const fetchProducts = useCallback(async () => {
-    console.log('fetchProducts', cursor);
     setPending(true);
     const postUrl = new URL(window.location.origin + url);
     postUrl.searchParams.set('cursor', cursor);
-    if (type) {
-      postUrl.searchParams.set('type', type);
-    }
 
     const response = await fetch(postUrl, {
       method: 'POST',
@@ -58,7 +52,7 @@ export function ProductGrid({
     setCursor(endCursor);
     setNextPage(hasNextPage);
     setPending(false);
-  }, [cursor, url, products, type]);
+  }, [cursor, url, products]);
 
   const handleIntersect = useCallback(
     (entries: IntersectionObserverEntry[]) => {
