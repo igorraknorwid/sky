@@ -16,14 +16,15 @@ import {
 import {PRODUCT_CARD_FRAGMENT} from '~/lib/fragments';
 import {PageHeader, ProductGrid, Section, Text} from '~/components';
 import {NotFound, Layout} from '~/components/index.server';
+import {IconSearch} from './../../components/elements/Icon';
 
 const pageBy = 48;
 let assemble = '';
 
 function checkSearchParam(strings: string[], types: string[]) {
   let result = true;
-  strings.forEach((vendor) => {
-    const find = types.find((v) => v === vendor);
+  strings.forEach((search) => {
+    const find = types.find((v) => v === search);
     if (!find) {
       result = false;
     }
@@ -61,6 +62,31 @@ function setFiltersGrafQLString(fa: {
     });
   }
   return assembly;
+}
+
+function setSearchString(
+  node: string,
+  sa: {
+    productType: string[];
+    productVendor: string[];
+  },
+) {
+  let str = '?';
+  function checkNodeInSearchArray(node: string, searchArr: string[]) {
+    const find = searchArr.find((o) => o === node);
+    return Boolean(find);
+  }
+  if (checkNodeInSearchArray(node, sa.productType)) {
+    str = '';
+  } else {
+    str += `type=${node}`;
+  }
+  // if (checkNodeInSearchArray(node, sa.productVendor)) {
+  //   str = '';
+  // } else {
+  //   str = `?brand=${node}`;
+  // }
+  return str;
 }
 
 function findNodeInSearchParams(node: string, arr: string[]) {
@@ -252,7 +278,13 @@ export default function Collection({params, search}: HydrogenRouteProps) {
                           ) && 'text-green-500'
                         }`}
                       >
-                        <Link to={`/collections/${handle}?type=${node}`}>
+                        {/* <Link to={`/collections/${handle}?type=${node}`}> */}
+                        <Link
+                          to={`/collections/${handle}${setSearchString(
+                            node,
+                            stringAccunulator,
+                          )}`}
+                        >
                           {node}
                         </Link>
                       </p>
@@ -278,7 +310,12 @@ export default function Collection({params, search}: HydrogenRouteProps) {
                           ) && 'text-green-500'
                         }`}
                       >
-                        <Link to={`/collections/${handle}?brand=${node}`}>
+                        <Link
+                          to={`/collections/${handle}${setSearchString(
+                            node,
+                            stringAccunulator,
+                          )}`}
+                        >
                           {node}
                         </Link>
                       </p>
@@ -334,10 +371,6 @@ export async function api(
       country,
     },
   });
-}
-
-export interface IType {
-  productType: string;
 }
 
 const COLLECTION_QUERY = gql`
