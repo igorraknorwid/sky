@@ -18,6 +18,55 @@ import {PageHeader, ProductGrid, Section, Text} from '~/components';
 import {NotFound, Layout} from '~/components/index.server';
 
 const pageBy = 48;
+let assemble = '';
+
+function checkSearchParam(strings: string[], types: string[]) {
+  let result = true;
+  strings.forEach((vendor) => {
+    const find = types.find((v) => v === vendor);
+    if (!find) {
+      result = false;
+    }
+  });
+  return result;
+}
+
+function setFiltersGrafQLString(fa: {
+  productType: string[];
+  productVendor: string[];
+}) {
+  let assembly = '';
+  const leftBracket = '{';
+  const rightBreck = '}';
+  const anvil = '"';
+  const colon = ':';
+  const comma = ',';
+  const setBlock = (Key: string, Value: string) => {
+    return `${leftBracket}${Key}${colon}${anvil}${Value}${anvil}${rightBreck}${comma}`;
+  };
+  const setAssembly = (node: string, arrKey: number) => {
+    const key = Object.keys(fa);
+    const result = setBlock(key[arrKey], node);
+    assembly += result;
+  };
+
+  if (fa.productType) {
+    fa.productType.forEach((node) => {
+      setAssembly(node, 0);
+    });
+  }
+  if (fa.productVendor) {
+    fa.productVendor.forEach((node) => {
+      setAssembly(node, 1);
+    });
+  }
+  return assembly;
+}
+
+function findNodeInSearchParams(node: string, arr: string[]) {
+  const find = arr.find((o) => o === node);
+  return Boolean(find);
+}
 
 export default function Collection({params, search}: HydrogenRouteProps) {
   const {handle} = params;
@@ -53,40 +102,9 @@ export default function Collection({params, search}: HydrogenRouteProps) {
     filteringData.vendors = [...new Set(mapedByVendorCollection)];
   }
 
-  function setFiltersGrafQLString(fa: {
-    productType: string[];
-    productVendor: string[];
-  }) {
-    let assembly = '';
-    const leftBracket = '{';
-    const rightBreck = '}';
-    const anvil = '"';
-    const colon = ':';
-    const comma = ',';
-    const setBlock = (Key: string, Value: string) => {
-      return `${leftBracket}${Key}${colon}${anvil}${Value}${anvil}${rightBreck}${comma}`;
-    };
-    const setAssembly = (node: string, arrKey: number) => {
-      const key = Object.keys(fa);
-      const result = setBlock(key[arrKey], node);
-      assembly += result;
-    };
-
-    if (fa.productType) {
-      fa.productType.forEach((node) => {
-        setAssembly(node, 0);
-      });
-    }
-    if (fa.productVendor) {
-      fa.productVendor.forEach((node) => {
-        setAssembly(node, 1);
-      });
-    }
-    return assembly;
-  }
-
   const searchParams: string[] = search.substring(1).split('&');
-  if (searchParams.length) {
+
+  if (searchParams.length === 0) {
     IsRightSearchParams = false;
   }
 
@@ -95,36 +113,43 @@ export default function Collection({params, search}: HydrogenRouteProps) {
     country: {isoCode: country},
   } = useLocalization();
 
-  getFilteringData();
+  getFilteringData(); // fetch full collection data
 
-  // fill Filter Accumulator
+  if (searchParams.length) {
+    searchParams?.forEach((node) => {
+      const splitedNode = node.split('=');
+      if (splitedNode[0] === 'type') {
+        stringAccunulator.productType.push(splitedNode[1]);
+      }
+      if (splitedNode[0] === 'brand') {
+        stringAccunulator.productVendor.push(splitedNode[1]);
+      }
+      if (splitedNode[0] !== 'brand' && splitedNode[0] !== 'type') {
+        IsRightSearchParams = false;
+      }
+    });
 
-  searchParams?.forEach((node) => {
-    const splitedNode = node.split('=');
-    if (splitedNode[0] === 'type') {
-      stringAccunulator.productType.push(splitedNode[1]);
-    }
-    if (splitedNode[0] === 'brand') {
-      stringAccunulator.productVendor.push(splitedNode[1]);
-    }
-    if (splitedNode[0] !== 'brand' && splitedNode[0] !== 'type') {
+    const checkProductTypes = checkSearchParam(
+      stringAccunulator.productType,
+      filteringData.types,
+    );
+
+    const checkVendors = checkSearchParam(
+      stringAccunulator.productVendor,
+      filteringData.vendors,
+    );
+
+    if (!checkProductTypes) {
       IsRightSearchParams = false;
     }
-  });
 
-  setFiltersGrafQLString(stringAccunulator); // set GrafQL query
-  const assemble = setFiltersGrafQLString(stringAccunulator);
+    if (!checkVendors) {
+      IsRightSearchParams = false;
+    }
 
-  // const checkSearchParam = (strings: string[], types: string[]) => {
-  //   let result = true;
-  //   strings.forEach((vendor) => {
-  //     const find = types.find((v) => v === vendor);
-  //     if (!find) {
-  //       result = false;
-  //     }
-  //   });
-  //   return result;
-  // };
+    // set GrafQL query
+    assemble = setFiltersGrafQLString(stringAccunulator);
+  }
 
   const COLLECTION_WITH_PARAMS_QUERY = `
     ${PRODUCT_CARD_FRAGMENT}
@@ -171,8 +196,8 @@ export default function Collection({params, search}: HydrogenRouteProps) {
     data: {collection},
   } = useShopQuery({
     query: IsRightSearchParams
-      ? COLLECTION_QUERY
-      : COLLECTION_WITH_PARAMS_QUERY,
+      ? COLLECTION_WITH_PARAMS_QUERY
+      : COLLECTION_QUERY,
     variables: {handle, language, country, pageBy},
     preload: true,
   });
@@ -210,12 +235,23 @@ export default function Collection({params, search}: HydrogenRouteProps) {
         <div className="flex">
           <div className="w-1/4">
             <div>
-              <p>Filter by:</p>
+              <Link to={`/collections/${handle}`}>Reset all filters</Link>
+            </div>
+            <div>
+              <p className="font-bold text-2xl">Filter by:</p>
               <div>
                 {filteringData?.types ? (
                   <div>
                     {filteringData.types.map((node) => (
-                      <p key={node} className={`text-red-600`}>
+                      <p
+                        key={node}
+                        className={`${
+                          findNodeInSearchParams(
+                            node,
+                            stringAccunulator.productType,
+                          ) && 'text-green-500'
+                        }`}
+                      >
                         <Link to={`/collections/${handle}?type=${node}`}>
                           {node}
                         </Link>
@@ -228,12 +264,20 @@ export default function Collection({params, search}: HydrogenRouteProps) {
               </div>
             </div>
             <div>
-              <p>Brands:</p>
+              <p className="font-bold text-2xl">Brands:</p>
               <div>
                 {filteringData?.vendors ? (
                   <div>
                     {filteringData.vendors.map((node) => (
-                      <p key={node} className={`text-red-600`}>
+                      <p
+                        key={node}
+                        className={`${
+                          findNodeInSearchParams(
+                            node,
+                            stringAccunulator.productVendor,
+                          ) && 'text-green-500'
+                        }`}
+                      >
                         <Link to={`/collections/${handle}?brand=${node}`}>
                           {node}
                         </Link>
@@ -274,7 +318,7 @@ export async function api(
 
   // const type = "women's clothing";
   const url = new URL(request.url);
-  // console.log(' URL:::!!!', url);
+
   const type = url.searchParams.get('type');
   const cursor = url.searchParams.get('cursor');
   const country = url.searchParams.get('country');
