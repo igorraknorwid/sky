@@ -65,28 +65,60 @@ function setFiltersGrafQLString(fa: {
 }
 
 function setSearchString(
+  key: "productType" | "productVendor",
   node: string,
   sa: {
     productType: string[];
     productVendor: string[];
   },
 ) {
-  let str = '?';
+  const str = '?';
+  let type = '';
+  let brand = '';
+  
   function checkNodeInSearchArray(node: string, searchArr: string[]) {
     const find = searchArr.find((o) => o === node);
     return Boolean(find);
   }
-  if (checkNodeInSearchArray(node, sa.productType)) {
-    str = '';
+ 
+  if (!checkNodeInSearchArray(node, sa.productType)&&key==="productType"){
+
+    sa.productType.forEach((t,i,array)=>{
+    
+           if(t !== node){ type += `type=${t}&`;}
+          
+     
+    })
+     type += `type=${node}`
+   
+   
   } else {
-    str += `type=${node}`;
+     sa.productType.forEach((t,i,array)=>{   
+            if(t !== node){ type += `type=${t}&`;}
+    })
+    if(sa.productVendor.length === 0) {type=type.slice(0, -1);}    
+
   }
-  // if (checkNodeInSearchArray(node, sa.productVendor)) {
-  //   str = '';
-  // } else {
-  //   str = `?brand=${node}`;
-  // }
-  return str;
+  
+
+  //---------------Brand---------------
+
+
+    if (!checkNodeInSearchArray(node, sa.productVendor)&&key==="productVendor"){
+
+    sa.productVendor.forEach((b,i,array)=>{    
+           if(b !== node){ type += `brand=${b}&`;}         
+    })
+     brand += `brand=${node}`   
+   
+  } else {
+     sa.productVendor.forEach((b,i,array)=>{   
+            if(b !== node){ brand += `brand=${b}&`;}
+    })
+    brand=brand.slice(0, -1);
+  }
+   
+  return str+type+brand
 }
 
 function findNodeInSearchParams(node: string, arr: string[]) {
@@ -281,6 +313,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
                         {/* <Link to={`/collections/${handle}?type=${node}`}> */}
                         <Link
                           to={`/collections/${handle}${setSearchString(
+                            "productType",
                             node,
                             stringAccunulator,
                           )}`}
@@ -312,6 +345,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
                       >
                         <Link
                           to={`/collections/${handle}${setSearchString(
+                            "productVendor",
                             node,
                             stringAccunulator,
                           )}`}
