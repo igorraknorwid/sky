@@ -72,7 +72,7 @@ function setSearchString(
     productVendor: string[];
   },
 ) {
-  const str = '?';
+
   let type = '';
   let brand = '';
   
@@ -83,20 +83,17 @@ function setSearchString(
  
   if (!checkNodeInSearchArray(node, sa.productType)&&key==="productType"){
 
-    sa.productType.forEach((t,i,array)=>{
-    
-           if(t !== node){ type += `type=${t}&`;}
-          
-     
+    sa.productType.forEach((t)=>{    
+           if(t !== node){ type += `type=${t}`;}   
     })
      type += `type=${node}`
    
    
   } else {
-     sa.productType.forEach((t,i,array)=>{   
-            if(t !== node){ type += `type=${t}&`;}
+     sa.productType.forEach((t)=>{   
+            if(t !== node){ type += `type=${t}`;}
     })
-    if(sa.productVendor.length === 0) {type=type.slice(0, -1);}    
+    
 
   }
   
@@ -107,18 +104,24 @@ function setSearchString(
     if (!checkNodeInSearchArray(node, sa.productVendor)&&key==="productVendor"){
 
     sa.productVendor.forEach((b,i,array)=>{    
-           if(b !== node){ type += `brand=${b}&`;}         
+           if(b !== node){ brand += `brand=${b}`;}         
     })
      brand += `brand=${node}`   
    
   } else {
      sa.productVendor.forEach((b,i,array)=>{   
-            if(b !== node){ brand += `brand=${b}&`;}
+            if(b !== node){ brand += `brand=${b}`;}
     })
-    brand=brand.slice(0, -1);
-  }
    
-  return str+type+brand
+  }
+
+  type = type.replace(/type/g,"&type")
+  brand = brand.replace(/brand/g,"&brand")
+  let result =  type+brand
+  result = result.replace("&","?")
+
+   
+  return result
 }
 
 function findNodeInSearchParams(node: string, arr: string[]) {
