@@ -103,13 +103,13 @@ function setSearchString(
 
     if (!checkNodeInSearchArray(node, sa.productVendor)&&key==="productVendor"){
 
-    sa.productVendor.forEach((b,i,array)=>{    
+    sa.productVendor.forEach((b)=>{    
            if(b !== node){ brand += `brand=${b}`;}         
     })
      brand += `brand=${node}`   
    
   } else {
-     sa.productVendor.forEach((b,i,array)=>{   
+     sa.productVendor.forEach((b)=>{   
             if(b !== node){ brand += `brand=${b}`;}
     })
    
