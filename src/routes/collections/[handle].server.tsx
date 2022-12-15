@@ -129,6 +129,50 @@ function setSearchString(
   return result;
 }
 
+function setStockString(
+ 
+  sa: {
+    productType: string[];
+    productVendor: string[];
+  },
+  avaliable: boolean,
+) {
+  let type = '';
+  let brand = '';
+  let stock = '';
+
+
+  //---------------Collect Type---------------
+
+  if(sa.productType.length){
+    sa.productType.forEach((t) => {
+     
+        type += `type=${t}`;
+      }
+    );   
+  } 
+
+  //---------------Brand---------------
+
+  if (sa.productType.length) {
+    sa.productVendor.forEach((b) => {   
+        brand += `brand=${b}`;      
+    });   
+  } 
+
+  type = type.replace(/type/g, '&type');
+  brand = brand.replace(/brand/g, '&brand');
+  if (!avaliable) {
+    stock += '&avaliable=false';
+  }
+  let result = type + brand + stock;
+  result = result.replace('&', '?');
+
+  return result;
+}
+
+
+
 function findNodeInSearchParams(node: string, arr: string[]) {
   const find = arr.find((o) => o === node);
   return Boolean(find);
@@ -138,16 +182,23 @@ export default function Collection({params, search}: HydrogenRouteProps) {
   let avaliable = true;
   const {handle} = params;
   let IsRightSearchParams = true;
+
+
+  // state for filters
   const filteringData: {types: any[]; vendors: any[]} = {
     types: [],
     vendors: [],
   };
 
+
+  //state for brouser string
   const stringAccunulator: {productType: string[]; productVendor: string[]} = {
     productType: [],
     productVendor: [],
   };
 
+
+  // get all collection data from API
   function getFilteringData() {
     const pageBy = 100;
     const {
@@ -178,10 +229,12 @@ export default function Collection({params, search}: HydrogenRouteProps) {
   const {
     language: {isoCode: language},
     country: {isoCode: country},
-  } = useLocalization();
+  } = useLocalization();  // Hydrotaton Hook
 
   getFilteringData(); // fetch full collection data
 
+
+  //
   if (searchParams.length) {
     searchParams?.forEach((node) => {
       const splitedNode = node.split('=');
