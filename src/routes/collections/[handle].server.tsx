@@ -18,10 +18,22 @@ import {PageHeader, ProductGrid, Section, Text} from '~/components';
 import {NotFound, Layout} from '~/components/index.server';
 import {IconSearch} from './../../components/elements/Icon';
 
-const pageBy = 48;
-let assemble = '';
+export interface IFiltering {
+  productType: string[];
+  productVendor: string[];
+  isAvalible: null|boolean
+}
 
-function checkSearchParam(strings: string[], types: string[]) {
+const pageBy = 48;
+const strings = {
+  assemble:"",
+  stock:""
+}
+
+
+//----- checkSearchParam -------
+
+function checkSearchParam (strings: string[], types: string[]) {
   let result = true;
   strings.forEach((search) => {
     const find = types.find((v) => v === search);
@@ -31,6 +43,8 @@ function checkSearchParam(strings: string[], types: string[]) {
   });
   return result;
 }
+
+//----- this function build GrafQL filtering fragment for query --------
 
 function setFiltersGrafQLString(fa: {
   productType: string[];
@@ -45,6 +59,7 @@ function setFiltersGrafQLString(fa: {
   const setBlock = (Key: string, Value: string) => {
     return `${leftBracket}${Key}${colon}${anvil}${Value}${anvil}${rightBreck}${comma}`;
   };
+   
   const setAssembly = (node: string, arrKey: number) => {
     const key = Object.keys(fa);
     const result = setBlock(key[arrKey], node);
@@ -65,18 +80,36 @@ function setFiltersGrafQLString(fa: {
   return assembly;
 }
 
+//-------------------------------------------
+//----- this function build GrafQL filtering fragment for query --------
+
+function setsGraphQLinStock (sa:IFiltering) {
+
+  const leftBracket = '{';
+  const rightBreck = '}';
+  const colon = ':';
+  const comma = ',';
+  const setBlock = (Value: boolean) => {
+    return `${leftBracket}${'available'}${colon}${Value}${rightBreck}${comma}`;
+  };
+
+ if(sa.isAvalible===null){return ''}
+ if(sa.isAvalible===true){return setBlock(true)}
+ if(sa.isAvalible===false){return setBlock(false)}
+
+
+}
+
+//---- set link for filtering element ----
+
 function setSearchString(
   key: 'productType' | 'productVendor',
   node: string,
-  sa: {
-    productType: string[];
-    productVendor: string[];
-  },
-  avaliable: boolean,
+  sa: IFiltering
 ) {
   let type = '';
   let brand = '';
-  let stock = '';
+
 
   function checkNodeInSearchArray(node: string, searchArr: string[]) {
     const find = searchArr.find((o) => o === node);
@@ -119,30 +152,22 @@ function setSearchString(
   }
 
   type = type.replace(/type/g, '&type');
-  brand = brand.replace(/brand/g, '&brand');
-  if (!avaliable) {
-    stock += '&avaliable=false';
-  }
-  let result = type + brand + stock;
+  brand = brand.replace(/brand/g, '&brand'); 
+  let result = type + brand 
   result = result.replace('&', '?');
 
   return result;
 }
 
+
+//_______________setStockString_____________________
+
 function setStockString(
- 
-  sa: {
-    productType: string[];
-    productVendor: string[];
-  },
-  avaliable: boolean,
+  sa: IFiltering, isInStock: boolean
 ) {
   let type = '';
   let brand = '';
   let stock = '';
-
-
-  //---------------Collect Type---------------
 
   if(sa.productType.length){
     sa.productType.forEach((t) => {
@@ -152,8 +177,6 @@ function setStockString(
     );   
   } 
 
-  //---------------Brand---------------
-
   if (sa.productType.length) {
     sa.productVendor.forEach((b) => {   
         brand += `brand=${b}`;      
@@ -162,24 +185,35 @@ function setStockString(
 
   type = type.replace(/type/g, '&type');
   brand = brand.replace(/brand/g, '&brand');
-  if (!avaliable) {
+  if (isInStock === true && sa.isAvalible === null)
+  {stock +='&avaliable=true'}
+  if (isInStock === true && sa.isAvalible === false)
+  {stock +='&avaliable=true'}
+  if (isInStock===false && sa.isAvalible === null) {
     stock += '&avaliable=false';
   }
+  if (isInStock===false && sa.isAvalible === true) {
+    stock += '&avaliable=false';
+  }
+
   let result = type + brand + stock;
   result = result.replace('&', '?');
 
   return result;
 }
 
-
+//-----------------------------------------------------------
 
 function findNodeInSearchParams(node: string, arr: string[]) {
   const find = arr.find((o) => o === node);
   return Boolean(find);
 }
 
+//------------------------------------------------------------------------
+
+
 export default function Collection({params, search}: HydrogenRouteProps) {
-  let avaliable = true;
+ 
   const {handle} = params;
   let IsRightSearchParams = true;
 
@@ -187,14 +221,15 @@ export default function Collection({params, search}: HydrogenRouteProps) {
   // state for filters
   const filteringData: {types: any[]; vendors: any[]} = {
     types: [],
-    vendors: [],
+    vendors: [],     
   };
 
 
   //state for brouser string
-  const stringAccunulator: {productType: string[]; productVendor: string[]} = {
+  const stringAccunulator: IFiltering = {
     productType: [],
-    productVendor: [],
+    productVendor: [],  
+    isAvalible:null  
   };
 
 
@@ -243,9 +278,14 @@ export default function Collection({params, search}: HydrogenRouteProps) {
       }
       if (splitedNode[0] === 'brand') {
         stringAccunulator.productVendor.push(splitedNode[1]);
-      }
-      if (splitedNode[0] === 'avaliable' && splitedNode[1] === 'false') {
-        avaliable = false;
+      } 
+      
+      if (splitedNode[0] === 'avaliable') {       
+        if(splitedNode[1] === 'true') {
+          stringAccunulator.isAvalible = true
+        } else {
+          stringAccunulator.isAvalible = false
+        }
       }
 
       if (
@@ -276,7 +316,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
     }
 
     // set GrafQL query
-    assemble = setFiltersGrafQLString(stringAccunulator);
+    strings.assemble = setFiltersGrafQLString(stringAccunulator);
   }
 
   const COLLECTION_WITH_PARAMS_QUERY = `
@@ -306,7 +346,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
         products(
           first: $pageBy
           after: $cursor
-          filters: [${assemble},{ available: ${avaliable}}]
+          filters: [${strings.assemble}, ${setsGraphQLinStock (stringAccunulator)}]
         ) {
           nodes {
             ...ProductCard
@@ -343,6 +383,9 @@ export default function Collection({params, search}: HydrogenRouteProps) {
     },
   });
 
+  console.log("stringAccunulator::::", stringAccunulator)
+  console.log("setsGraphQLinStock:::::", setsGraphQLinStock (stringAccunulator))
+
   return (
     <Layout>
       <Suspense>
@@ -366,6 +409,11 @@ export default function Collection({params, search}: HydrogenRouteProps) {
               <Link to={`/collections/${handle}`}>Reset all filters</Link>
             </div>
             <div>
+                <p className="font-bold text-2xl">Filter by:</p>
+              <div><Link to={`/collections/${handle}${setStockString(stringAccunulator,true)}`}>In Stock</Link></div>
+              <div><Link to={`/collections/${handle}${setStockString(stringAccunulator, false)}`}>Not Avalible</Link></div>              
+            </div>
+            <div>
               <p className="font-bold text-2xl">Filter by:</p>
               <div>
                 {filteringData?.types ? (
@@ -385,8 +433,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
                           to={`/collections/${handle}${setSearchString(
                             'productType',
                             node,
-                            stringAccunulator,
-                            avaliable,
+                            stringAccunulator                           
                           )}`}
                         >
                           {node}
@@ -418,8 +465,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
                           to={`/collections/${handle}${setSearchString(
                             'productVendor',
                             node,
-                            stringAccunulator,
-                            avaliable,
+                            stringAccunulator,                           
                           )}`}
                         >
                           {node}
