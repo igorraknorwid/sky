@@ -17,23 +17,23 @@ import {PRODUCT_CARD_FRAGMENT} from '~/lib/fragments';
 import {PageHeader, ProductGrid, Section, Text} from '~/components';
 import {NotFound, Layout} from '~/components/index.server';
 import {IconSearch} from './../../components/elements/Icon';
+import {Prices} from './../../components/test/Test.client';
 
 export interface IFiltering {
   productType: string[];
   productVendor: string[];
-  isAvalible: null|boolean
+  isAvalible: null | boolean;
 }
 
 const pageBy = 48;
 const strings = {
-  assemble:"",
-  stock:""
-}
-
+  assemble: '',
+  stock: '',
+};
 
 //----- checkSearchParam -------
 
-function checkSearchParam (strings: string[], types: string[]) {
+function checkSearchParam(strings: string[], types: string[]) {
   let result = true;
   strings.forEach((search) => {
     const find = types.find((v) => v === search);
@@ -59,7 +59,7 @@ function setFiltersGrafQLString(fa: {
   const setBlock = (Key: string, Value: string) => {
     return `${leftBracket}${Key}${colon}${anvil}${Value}${anvil}${rightBreck}${comma}`;
   };
-   
+
   const setAssembly = (node: string, arrKey: number) => {
     const key = Object.keys(fa);
     const result = setBlock(key[arrKey], node);
@@ -83,8 +83,7 @@ function setFiltersGrafQLString(fa: {
 //-------------------------------------------
 //----- this function build GrafQL filtering fragment for query --------
 
-function setsGraphQLinStock (sa:IFiltering) {
-
+function setsGraphQLinStock(sa: IFiltering) {
   const leftBracket = '{';
   const rightBreck = '}';
   const colon = ':';
@@ -93,11 +92,15 @@ function setsGraphQLinStock (sa:IFiltering) {
     return `${leftBracket}${'available'}${colon}${Value}${rightBreck}${comma}`;
   };
 
- if(sa.isAvalible===null){return ''}
- if(sa.isAvalible===true){return setBlock(true)}
- if(sa.isAvalible===false){return setBlock(false)}
-
-
+  if (sa.isAvalible === null) {
+    return '';
+  }
+  if (sa.isAvalible === true) {
+    return setBlock(true);
+  }
+  if (sa.isAvalible === false) {
+    return setBlock(false);
+  }
 }
 
 //---- set link for filtering element ----
@@ -105,11 +108,10 @@ function setsGraphQLinStock (sa:IFiltering) {
 function setSearchString(
   key: 'productType' | 'productVendor',
   node: string,
-  sa: IFiltering
+  sa: IFiltering,
 ) {
   let type = '';
   let brand = '';
-
 
   function checkNodeInSearchArray(node: string, searchArr: string[]) {
     const find = searchArr.find((o) => o === node);
@@ -152,47 +154,44 @@ function setSearchString(
   }
 
   type = type.replace(/type/g, '&type');
-  brand = brand.replace(/brand/g, '&brand'); 
-  let result = type + brand 
+  brand = brand.replace(/brand/g, '&brand');
+  let result = type + brand;
   result = result.replace('&', '?');
 
   return result;
 }
 
-
 //_______________setStockString_____________________
 
-function setStockString(
-  sa: IFiltering, isInStock: boolean
-) {
+function setStockString(sa: IFiltering, isInStock: boolean) {
   let type = '';
   let brand = '';
   let stock = '';
 
-  if(sa.productType.length){
+  if (sa.productType.length) {
     sa.productType.forEach((t) => {
-     
-        type += `type=${t}`;
-      }
-    );   
-  } 
+      type += `type=${t}`;
+    });
+  }
 
   if (sa.productType.length) {
-    sa.productVendor.forEach((b) => {   
-        brand += `brand=${b}`;      
-    });   
-  } 
+    sa.productVendor.forEach((b) => {
+      brand += `brand=${b}`;
+    });
+  }
 
   type = type.replace(/type/g, '&type');
   brand = brand.replace(/brand/g, '&brand');
-  if (isInStock === true && sa.isAvalible === null)
-  {stock +='&avaliable=true'}
-  if (isInStock === true && sa.isAvalible === false)
-  {stock +='&avaliable=true'}
-  if (isInStock===false && sa.isAvalible === null) {
+  if (isInStock === true && sa.isAvalible === null) {
+    stock += '&avaliable=true';
+  }
+  if (isInStock === true && sa.isAvalible === false) {
+    stock += '&avaliable=true';
+  }
+  if (isInStock === false && sa.isAvalible === null) {
     stock += '&avaliable=false';
   }
-  if (isInStock===false && sa.isAvalible === true) {
+  if (isInStock === false && sa.isAvalible === true) {
     stock += '&avaliable=false';
   }
 
@@ -211,27 +210,22 @@ function findNodeInSearchParams(node: string, arr: string[]) {
 
 //------------------------------------------------------------------------
 
-
 export default function Collection({params, search}: HydrogenRouteProps) {
- 
   const {handle} = params;
   let IsRightSearchParams = true;
-
 
   // state for filters
   const filteringData: {types: any[]; vendors: any[]} = {
     types: [],
-    vendors: [],     
+    vendors: [],
   };
-
 
   //state for brouser string
   const stringAccunulator: IFiltering = {
     productType: [],
-    productVendor: [],  
-    isAvalible:null  
+    productVendor: [],
+    isAvalible: null,
   };
-
 
   // get all collection data from API
   function getFilteringData() {
@@ -264,10 +258,9 @@ export default function Collection({params, search}: HydrogenRouteProps) {
   const {
     language: {isoCode: language},
     country: {isoCode: country},
-  } = useLocalization();  // Hydrotaton Hook
+  } = useLocalization(); // Hydrotaton Hook
 
   getFilteringData(); // fetch full collection data
-
 
   //
   if (searchParams.length) {
@@ -278,13 +271,13 @@ export default function Collection({params, search}: HydrogenRouteProps) {
       }
       if (splitedNode[0] === 'brand') {
         stringAccunulator.productVendor.push(splitedNode[1]);
-      } 
-      
-      if (splitedNode[0] === 'avaliable') {       
-        if(splitedNode[1] === 'true') {
-          stringAccunulator.isAvalible = true
+      }
+
+      if (splitedNode[0] === 'avaliable') {
+        if (splitedNode[1] === 'true') {
+          stringAccunulator.isAvalible = true;
         } else {
-          stringAccunulator.isAvalible = false
+          stringAccunulator.isAvalible = false;
         }
       }
 
@@ -346,7 +339,9 @@ export default function Collection({params, search}: HydrogenRouteProps) {
         products(
           first: $pageBy
           after: $cursor
-          filters: [${strings.assemble}, ${setsGraphQLinStock (stringAccunulator)}]
+          filters: [${strings.assemble}, ${setsGraphQLinStock(
+    stringAccunulator,
+  )}]
         ) {
           nodes {
             ...ProductCard
@@ -383,8 +378,8 @@ export default function Collection({params, search}: HydrogenRouteProps) {
     },
   });
 
-  console.log("stringAccunulator::::", stringAccunulator)
-  console.log("setsGraphQLinStock:::::", setsGraphQLinStock (stringAccunulator))
+  console.log('stringAccunulator::::', stringAccunulator);
+  console.log('setsGraphQLinStock:::::', setsGraphQLinStock(stringAccunulator));
 
   return (
     <Layout>
@@ -409,9 +404,30 @@ export default function Collection({params, search}: HydrogenRouteProps) {
               <Link to={`/collections/${handle}`}>Reset all filters</Link>
             </div>
             <div>
-                <p className="font-bold text-2xl">Filter by:</p>
-              <div><Link to={`/collections/${handle}${setStockString(stringAccunulator,true)}`}>In Stock</Link></div>
-              <div><Link to={`/collections/${handle}${setStockString(stringAccunulator, false)}`}>Not Avalible</Link></div>              
+              <Prices min={5} max={100} />
+            </div>
+            <div>
+              <p className="font-bold text-2xl">Filter by:</p>
+              <div>
+                <Link
+                  to={`/collections/${handle}${setStockString(
+                    stringAccunulator,
+                    true,
+                  )}`}
+                >
+                  In Stock
+                </Link>
+              </div>
+              <div>
+                <Link
+                  to={`/collections/${handle}${setStockString(
+                    stringAccunulator,
+                    false,
+                  )}`}
+                >
+                  Not Avalible
+                </Link>
+              </div>
             </div>
             <div>
               <p className="font-bold text-2xl">Filter by:</p>
@@ -433,7 +449,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
                           to={`/collections/${handle}${setSearchString(
                             'productType',
                             node,
-                            stringAccunulator                           
+                            stringAccunulator,
                           )}`}
                         >
                           {node}
@@ -465,7 +481,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
                           to={`/collections/${handle}${setSearchString(
                             'productVendor',
                             node,
-                            stringAccunulator,                           
+                            stringAccunulator,
                           )}`}
                         >
                           {node}
