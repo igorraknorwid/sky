@@ -404,7 +404,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
               <Link to={`/collections/${handle}`}>Reset all filters</Link>
             </div>
             <div>
-              <Prices min={5} max={100} />
+              <Prices min={5} max={100} handle={handle} />
             </div>
             <div>
               <p className="font-bold text-2xl">Filter by:</p>
