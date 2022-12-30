@@ -3,13 +3,18 @@ import {Link} from '@shopify/hydrogen';
 import React from 'react';
 
 export function Prices({min, max}: {min: number; max: number}) {
-  const [state, setState] = React.useState(0);
+  const [minValue, setMinValue] = React.useState(0);
+  const [maxValue, setMaxValue] = React.useState(0);
   const setMin = (min: number) => {
-    setState(min);
+    setMinValue(min);
+  };
+  const setMax = (max: number) => {
+    setMaxValue(max);
   };
   return (
     <div>
-      <div>{state}</div>
+      <div>{minValue}</div>
+      <div>{maxValue}</div>
       <button
         onClick={() => {
           setMin(min);
@@ -17,7 +22,13 @@ export function Prices({min, max}: {min: number; max: number}) {
       >
         {min}
       </button>
-      <div>{max}</div>
+      <button
+        onClick={() => {
+          setMax(max);
+        }}
+      >
+        {max}
+      </button>
     </div>
   );
 }
