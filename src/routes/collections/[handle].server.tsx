@@ -26,6 +26,7 @@ export interface IFiltering {
 }
 
 const pageBy = 48;
+const prices = {min: 0, max: 0};
 const strings = {
   assemble: '',
   stock: '',
@@ -229,6 +230,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
 
   // get all collection data from API
   function getFilteringData() {
+    const arr: number[] = [];
     const pageBy = 100;
     const {
       data: {collection},
@@ -236,6 +238,14 @@ export default function Collection({params, search}: HydrogenRouteProps) {
       query: FOR_FILTERING_COLLECTION_QUERY,
       variables: {handle, language, country, pageBy},
       preload: true,
+    });
+
+    // console.log('COLLECTION::::', collection.products.nodes);
+
+    collection.products.nodes.forEach((node: any) => {
+      node.variants.nodes.forEach((x: any) => {
+        arr.push(Number(x.priceV2.amount));
+      });
     });
 
     const mapedByProductTypeCollection = [...collection.products.nodes].map(
@@ -247,6 +257,11 @@ export default function Collection({params, search}: HydrogenRouteProps) {
       (node: any) => node.vendor,
     );
     filteringData.vendors = [...new Set(mapedByVendorCollection)];
+    prices.min = Math.min(...arr);
+    prices.max = Math.max(...arr);
+    console.log('Arr', arr);
+    console.log('Maxx', Math.max(...arr));
+    console.log('Min', Math.min(...arr));
   }
 
   const searchParams: string[] = search.substring(1).split('&');
@@ -378,8 +393,8 @@ export default function Collection({params, search}: HydrogenRouteProps) {
     },
   });
 
-  console.log('stringAccunulator::::', stringAccunulator);
-  console.log('setsGraphQLinStock:::::', setsGraphQLinStock(stringAccunulator));
+  // console.log('stringAccunulator::::', stringAccunulator);
+  // console.log('setsGraphQLinStock:::::', setsGraphQLinStock(stringAccunulator));
 
   return (
     <Layout>
@@ -404,7 +419,7 @@ export default function Collection({params, search}: HydrogenRouteProps) {
               <Link to={`/collections/${handle}`}>Reset all filters</Link>
             </div>
             <div>
-              <Prices min={5} max={100} handle={handle} />
+              <Prices min={prices.min} max={prices.max} handle={handle} />
             </div>
             <div>
               <p className="font-bold text-2xl">Filter by:</p>

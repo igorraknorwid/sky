@@ -12,19 +12,28 @@ export function Prices({
   handle: string;
 }) {
   const navigate = useNavigate();
+  const [init, setInit] = React.useState(false);
   const [minValue, setMinValue] = React.useState(min);
   const [maxValue, setMaxValue] = React.useState(max);
   const setMin = (min: number) => {
+    if (!init) {
+      setInit(true);
+    }
     setMinValue(min);
   };
   const setMax = (max: number) => {
+    if (!init) {
+      setInit(true);
+    }
     setMaxValue(max);
   };
   React.useEffect(() => {
-    navigate(`/collections/${handle}?min=${minValue}&max=${maxValue}`, {
-      replace: true,
-    });
-  }, [minValue, maxValue, navigate, handle]);
+    if (init) {
+      navigate(`/collections/${handle}?min=${minValue}&max=${maxValue}`, {
+        replace: true,
+      });
+    }
+  }, [minValue, maxValue, navigate, handle, init]);
   return (
     <div>
       {/* <div>{minValue}</div>
@@ -39,17 +48,24 @@ export function Prices({
         </button>
         <button
           onClick={() => {
-            setMin(min + 10);
+            setMin(Math.floor((max - min) / 4));
           }}
         >
-          {min + 10}
+          {Math.floor((max - min) / 4)}
         </button>
         <button
           onClick={() => {
-            setMax(max - 10);
+            setMin(Math.floor((max - min) / 2));
           }}
         >
-          {max - 10}
+          {Math.floor((max - min) / 2)}
+        </button>
+        <button
+          onClick={() => {
+            setMin(Math.floor((max - min) / 1.5));
+          }}
+        >
+          {Math.floor((max - min) / 1.5)}
         </button>
         <button
           onClick={() => {
